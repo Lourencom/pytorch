@@ -6,6 +6,7 @@ from typing import Callable, List, Optional
 
 import torch
 from torch import multiprocessing as mp
+from torch._dynamo import reset
 from torch._dynamo.test_case import run_tests, TestCase
 from torch._dynamo.testing import reset_rng_state
 from torch._dynamo.utils import counters
@@ -219,6 +220,49 @@ class TestMaxAutotune(TestCase):
         b = torch.randn(10, 100).cuda()
 
         with config.patch({"max_autotune": True}):
+            torch.compile(mm, dynamic=dynamic)(a, b)
+
+    @parametrize("dynamic", (False, True))
+    def test_max_autotune_remote_caching(self, dynamic: bool):
+        from unittest.mock import patch
+
+        def mm(a, b):
+            a = torch.sin(a)
+            return a @ b
+
+        a = torch.randn(100, 10).cuda()
+        b = torch.randn(10, 100).cuda()
+
+        class MyCache:
+            def __init__(self, key, is_autotune=False):
+                self.cache = {}
+
+            def get(self, filenames):
+                return {
+                    file: self.cache[file] for file in filenames if file in self.cache
+                }
+
+            def put(self, filename, data):
+                self.cache[filename] = data
+
+        cache_module = (
+            "triton.runtime.fb_memcache.FbMemcacheRemoteCacheBackend"
+            if config.is_fbcode()
+            else "triton.runtime.cache.RedisRemoteCacheBackend"
+        )
+
+        with config.patch(
+            {
+                "max_autotune": True,
+                "use_autotune_local_cache": False,
+                "use_autotune_remote_cache": True,
+            }
+        ), patch.dict(os.environ), patch(cache_module, MyCache, create=True):
+            os.environ.pop("TRITON_CACHE_MANAGER", None)
+            torch.compile(mm, dynamic=dynamic)(a, b)
+            reset()
+            torch.compile(mm, dynamic=dynamic)(a, b)
+            reset()
             torch.compile(mm, dynamic=dynamic)(a, b)
 
     def test_precompilation_threads(self):
