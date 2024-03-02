@@ -549,7 +549,6 @@ struct TORCH_API NoTF32Guard {
   bool changed = false;
 };
 
-#ifdef USE_ROCM
 struct TORCH_API ROCmBackwardPassGuard {
   ROCmBackwardPassGuard();
   ~ROCmBackwardPassGuard();
@@ -558,6 +557,5 @@ struct TORCH_API ROCmBackwardPassGuard {
  private:
   static thread_local bool is_backward_pass_;
 };
-#endif
 
 } // namespace at
