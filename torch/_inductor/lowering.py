@@ -2083,6 +2083,7 @@ def sdpa_constraint(fx_node, *args, **kwargs):
 
 
 # WIP
+make_fallback(aten.avg_pool3d_backward) # lourencom + martim03, after done we remove this line
 make_fallback(aten._adaptive_avg_pool3d)  # @isuruf
 make_fallback(aten.adaptive_max_pool3d)  # @isuruf
 make_fallback(aten.fractional_max_pool3d)  # @isuruf
@@ -2141,7 +2142,6 @@ make_fallback(aten._fused_moving_avg_obs_fq_helper_functional)
 
 
 # 4) Backwards (try py_impl'ing them) when fwd is written as a decomp
-make_fallback(aten.avg_pool3d_backward)
 make_fallback(aten.max_pool3d_with_indices_backward)
 make_fallback(aten._adaptive_avg_pool2d_backward, require_dense)
 make_fallback(aten._adaptive_avg_pool3d_backward)
@@ -4733,6 +4733,16 @@ def avg_pool2d_backward(
         ranges=new_size,
     )
     return rv
+
+#fallback_avg_pool3d_backward = fallback_handler(
+#    aten.avg_pool3d_backward.default, add_to_fallback_set=False
+#)
+
+#@register_lowering(aten.avg_pool3d_backward, type_promotion_kind=None)
+#def avg_pool3d_backward():
+    # TODO: we could additionally try to check if we can do the decomposition of
+    #   maxpool3d, etc. (maybe for deterministic purposes)
+#    pass
 
 
 def _validate_reduction_axis(x, axis):
