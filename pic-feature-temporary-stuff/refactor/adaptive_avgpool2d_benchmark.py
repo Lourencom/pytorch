@@ -29,7 +29,7 @@ RATIOS = [0.1,
 
 def benchmark(name, label, f, x, out_size, would_fallback):
     """Update signature and sub label as needed"""
-    sub_label = f"{tuple(x.shape)}, adaptive_max_pool2d({out_size})"
+    sub_label = f"{tuple(x.shape)}, adaptive_avg_pool2d({out_size})"
     if would_fallback:
         sub_label = sub_label + "*"
 
