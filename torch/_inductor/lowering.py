@@ -4026,9 +4026,15 @@ def compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out):
 
 
 # pooling_fn should be ops.add or ops.maximum, does not support indices
-def _adaptive_pooling_fn(kernel_maxes, start_index_fns, end_index_fns, pooling_fn):
-    h_start_index_fn, w_start_index_fn = start_index_fns
-    h_end_index_fn, w_end_index_fn = end_index_fns
+def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
+
+    h_in, w_in = in_sizes
+    h_out, w_out = out_sizes
+
+    (h_start_index_fn,
+     w_start_index_fn,
+     h_end_index_fn,
+     w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
 
     def fn(idx, loader):
         *prefix, bh, bw = idx
@@ -4169,11 +4175,6 @@ def _adaptive_avg_pool2d(x, output_size):
     new_size = list(batch) + [h_out, w_out]
     dtype = x.get_dtype()
 
-    (h_start_index,
-     h_end_index,
-     w_start_index,
-     w_end_index) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
-
     window_size = h_kernel_max * w_kernel_max
     if window_size > 25:
         # Kernel size too big. Results in hard-to-optimize Triton code. Use fallback.
@@ -4181,8 +4182,8 @@ def _adaptive_avg_pool2d(x, output_size):
 
     fn_sum = _adaptive_pooling_fn(
         kernel_maxes=[h_kernel_max, w_kernel_max],
-        start_index_fns=[h_start_index, w_start_index],
-        end_index_fns=[h_end_index, w_end_index],
+        in_sizes=[h_in, w_in],
+        out_sizes=[h_out, w_out],
         pooling_fn=ops.add,
     )
 
