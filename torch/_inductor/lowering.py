@@ -4110,36 +4110,6 @@ def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, loader, poo
     return fn
 
 
-def _adaptive_pooling_idx_sum(kernel_maxes, start_index_fns, end_index_fns):
-    h_start_index_fn, w_start_index_fn = start_index_fns
-    h_end_index_fn, w_end_index_fn = end_index_fns
-
-    def fn_sum(idx, loader):
-        *prefix, bh, bw = idx
-
-        h_start_index = h_start_index_fn(bh)
-        h_end_index = h_end_index_fn(bh)
-
-        w_start_index = w_start_index_fn(bw)
-        w_end_index = w_end_index_fn(bw)
-
-        total = None
-        for ih, iw in itertools.product(range(kernel_maxes[0]), range(kernel_maxes[1])):
-            val = loader(
-                prefix,
-                [ih, iw],
-                [h_start_index, w_start_index],
-                [h_end_index, w_end_index],
-            )
-            if total is None:
-                total = val
-            else:
-                total = ops.add(val, total)
-        return total
-
-    return fn_sum
-
-
 fallback_adaptive_avg_pool2d = fallback_handler(
     aten._adaptive_avg_pool2d.default, add_to_fallback_set=False
 )
@@ -4459,22 +4429,11 @@ def upsample_nearest2d_backward(
     h_kernel_max = ceildiv(inp_h, out_h)
     w_kernel_max = ceildiv(inp_w, out_w)
 
-    def start_index(index, out_dim, inp_dim):
-        return CeilDiv(index * inp_dim, out_dim)
-
-    def end_index(index, out_dim, inp_dim):
-        return start_index((index + 1), out_dim, inp_dim)
-
-    h_start_index = functools.partial(start_index, out_dim=out_h, inp_dim=inp_h)
-    h_end_index = functools.partial(end_index, out_dim=out_h, inp_dim=inp_h)
-
-    w_start_index = functools.partial(start_index, out_dim=out_w, inp_dim=inp_w)
-    w_end_index = functools.partial(end_index, out_dim=out_w, inp_dim=inp_w)
-
-    fn_sum = _adaptive_pooling_idx_sum(
-        [h_kernel_max, w_kernel_max],
-        [h_start_index, w_start_index],
-        [h_end_index, w_end_index],
+    fn_sum = _adaptive_pooling_fn(
+        kernel_maxes=[h_kernel_max, w_kernel_max],
+        in_sizes=[inp_h, inp_w],
+        out_sizes=[out_h, out_w],
+        pooling_fn=ops.add,
     )
 
     def fn(idx):
