@@ -4008,6 +4008,102 @@ def pad_adaptive_loader(x, pad_val=0.0):
     return load
 
 
+def compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out):
+
+    def start_index(index, out_dim, inp_dim):
+        return FloorDiv((index * inp_dim), out_dim)
+
+    def end_index(index, out_dim, inp_dim):
+        return FloorDiv((index + 1) * inp_dim + out_dim - 1, out_dim)
+
+    h_start_index = functools.partial(start_index, out_dim=h_out, inp_dim=h_in)
+    h_end_index = functools.partial(end_index, out_dim=h_out, inp_dim=h_in)
+
+    w_start_index = functools.partial(start_index, out_dim=w_out, inp_dim=w_in)
+    w_end_index = functools.partial(end_index, out_dim=w_out, inp_dim=w_in)
+
+    return h_start_index, h_end_index, w_start_index, w_end_index
+
+
+# pooling_fn should be ops.add or ops.maximum, does not support indices
+def _adaptive_pooling_fn(kernel_maxes, start_index_fns, end_index_fns, pooling_fn):
+    h_start_index_fn, w_start_index_fn = start_index_fns
+    h_end_index_fn, w_end_index_fn = end_index_fns
+
+    def fn(idx, loader):
+        *prefix, bh, bw = idx
+
+        h_start_index = h_start_index_fn(bh)
+        h_end_index = h_end_index_fn(bh)
+
+        w_start_index = w_start_index_fn(bw)
+        w_end_index = w_end_index_fn(bw)
+
+        result = None
+        for ih, iw in itertools.product(range(kernel_maxes[0]), range(kernel_maxes[1])):
+            val = loader(
+                prefix,
+                [ih, iw],
+                [h_start_index, w_start_index],
+                [h_end_index, w_end_index],
+            )
+            if result is None:
+                result = val
+            else:
+                result = pooling_fn(val, result)
+        return result
+
+    return fn
+
+
+def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, loader, pooling_fn):
+
+    h_in, w_in = in_sizes
+    h_out, w_out = out_sizes
+
+    (h_start_index_fn,
+     w_start_index_fn,
+     h_end_index_fn,
+     w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
+
+    def fn(idx):
+        *prefix, bh, bw = idx
+
+        h_start_index = h_start_index_fn(bh)
+        h_end_index = h_end_index_fn(bh)
+
+        w_start_index = w_start_index_fn(bw)
+        w_end_index = w_end_index_fn(bw)
+
+        maxval = None
+        maxindex = None
+        for ih, iw in itertools.product(range(kernel_maxes[0]), range(kernel_maxes[1])):
+            val = loader(
+                prefix,
+                [ih, iw],
+                [h_start_index, w_start_index],
+                [h_end_index, w_end_index],
+            )
+
+            index = ops.index_expr(
+                (h_start_index + ih) * w_in + w_start_index + iw, torch.int64
+            )
+
+            if maxindex is None:
+                maxindex = index
+            else:
+                maxindex = ops.where(ops.gt(val, maxval), index, maxindex)
+
+            if maxval is None:
+                maxval = val
+            else:
+                maxval = pooling_fn(val, maxval)
+
+        return maxindex
+
+    return fn
+
+
 def _adaptive_pooling_idx_sum(kernel_maxes, start_index_fns, end_index_fns):
     h_start_index_fn, w_start_index_fn = start_index_fns
     h_end_index_fn, w_end_index_fn = end_index_fns
