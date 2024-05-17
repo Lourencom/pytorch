@@ -4169,27 +4169,21 @@ def _adaptive_avg_pool2d(x, output_size):
     new_size = list(batch) + [h_out, w_out]
     dtype = x.get_dtype()
 
-    def start_index(index, out_dim, inp_dim):
-        return FloorDiv((index * inp_dim), out_dim)
-
-    def end_index(index, out_dim, inp_dim):
-        return FloorDiv((index + 1) * inp_dim + out_dim - 1, out_dim)
-
-    h_start_index = functools.partial(start_index, out_dim=h_out, inp_dim=h_in)
-    h_end_index = functools.partial(end_index, out_dim=h_out, inp_dim=h_in)
-
-    w_start_index = functools.partial(start_index, out_dim=w_out, inp_dim=w_in)
-    w_end_index = functools.partial(end_index, out_dim=w_out, inp_dim=w_in)
+    (h_start_index,
+     h_end_index,
+     w_start_index,
+     w_end_index) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
 
     window_size = h_kernel_max * w_kernel_max
     if window_size > 25:
         # Kernel size too big. Results in hard-to-optimize Triton code. Use fallback.
         return fallback_adaptive_avg_pool2d(x, output_size)
 
-    fn_sum = _adaptive_pooling_idx_sum(
-        [h_kernel_max, w_kernel_max],
-        [h_start_index, w_start_index],
-        [h_end_index, w_end_index],
+    fn_sum = _adaptive_pooling_fn(
+        kernel_maxes=[h_kernel_max, w_kernel_max],
+        start_index_fns=[h_start_index, w_start_index],
+        end_index_fns=[h_end_index, w_end_index],
+        pooling_fn=ops.add,
     )
 
     ones_loader = pad_adaptive_loader(ones_like(x))
