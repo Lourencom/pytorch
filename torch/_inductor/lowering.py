@@ -4239,7 +4239,7 @@ def adaptive_max_pool2d(x, output_size):
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
         pooling_fn=ops.maximum,
-        # todo: loader=pad_adaptive_loader(x, float("-inf")), ?? lets check if this is needed
+        loader=pad_adaptive_loader(x, float("-inf")), # ?? lets check if this is needed
     )
 
     rv = Pointwise.create(
