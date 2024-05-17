@@ -4032,8 +4032,8 @@ def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
     h_out, w_out = out_sizes
 
     (h_start_index_fn,
-     w_start_index_fn,
      h_end_index_fn,
+     w_start_index_fn,
      w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
 
     def fn(idx, loader):
@@ -4068,8 +4068,8 @@ def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, loader, poo
     h_out, w_out = out_sizes
 
     (h_start_index_fn,
-     w_start_index_fn,
      h_end_index_fn,
+     w_start_index_fn,
      w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
 
     def fn(idx):
