@@ -13,6 +13,7 @@ torch._logging.set_logs(output_code=True)
 
 benchmark_name = "avgpool_3d_backwards"
 Ss = [
+    # batchsize, numchannels, depth, height, width
     [3, 5, 400, 200, 200],
     [3, 5, 300, 200, 200],
     [3, 5, 200, 200, 200],
@@ -23,6 +24,12 @@ Ss = [
     [3, 5, 10, 20, 20],
     [3, 5, 5, 10, 10],
     [3, 5, 2, 5, 5],
+    [1, 1, 10, 10, 10],
+    [8, 16, 64, 64, 64],
+    [1, 3, 128, 128, 128],
+    [8, 8, 128, 128, 128],
+    [2, 3, 150, 150, 150],
+    [1, 1, 50, 50, 50],
 ]
 
 
@@ -52,9 +59,9 @@ def compare(args):
 
     aten_func = aten.avg_pool3d_backward
 
-    kernel_size = (2, 2, 2)  # kernel size for 3D
-    stride = (2, 2, 2)  # stride for 3D
-    padding = (0, 0, 0)  # padding for 3D
+    kernel_size = (2, 2, 2)
+    stride = (2, 2, 2)
+    padding = (0, 0, 0)
     ceil_mode = False
     count_include_pad = False
     divisor_override = None
