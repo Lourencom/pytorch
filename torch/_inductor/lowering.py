@@ -4008,13 +4008,7 @@ def pad_adaptive_loader(x, pad_val=0.0):
     return load
 
 
-def compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out):
-
-    def start_index(index, out_dim, inp_dim):
-        return FloorDiv((index * inp_dim), out_dim)
-
-    def end_index(index, out_dim, inp_dim):
-        return FloorDiv((index + 1) * inp_dim + out_dim - 1, out_dim)
+def compute_indices_adaptive_pooling(start_index, end_index, h_in, w_in, h_out, w_out):
 
     h_start_index = functools.partial(start_index, out_dim=h_out, inp_dim=h_in)
     h_end_index = functools.partial(end_index, out_dim=h_out, inp_dim=h_in)
@@ -4026,7 +4020,7 @@ def compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out):
 
 
 # pooling_fn should be ops.add or ops.maximum, does not support indices
-def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
+def _adaptive_pooling_fn(start_index, end_index, kernel_maxes, in_sizes, out_sizes, pooling_fn):
 
     h_in, w_in = in_sizes
     h_out, w_out = out_sizes
@@ -4034,7 +4028,7 @@ def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
     (h_start_index_fn,
      h_end_index_fn,
      w_start_index_fn,
-     w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
+     w_end_index_fn) = compute_indices_adaptive_pooling(start_index, end_index, h_in, w_in, h_out, w_out)
 
     def fn(idx, loader):
         *prefix, bh, bw = idx
@@ -4062,7 +4056,7 @@ def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
     return fn
 
 
-def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, pooling_fn):
+def _adaptive_pooling_fn_with_idx(start_index, end_index, kernel_maxes, in_sizes, out_sizes, pooling_fn):
 
     h_in, w_in = in_sizes
     h_out, w_out = out_sizes
@@ -4070,7 +4064,7 @@ def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, pooling_fn)
     (h_start_index_fn,
      h_end_index_fn,
      w_start_index_fn,
-     w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
+     w_end_index_fn) = compute_indices_adaptive_pooling(start_index, end_index, h_in, w_in, h_out, w_out)
 
     def fn(idx, loader):
         *prefix, bh, bw = idx
@@ -4150,7 +4144,15 @@ def _adaptive_avg_pool2d(x, output_size):
         # Kernel size too big. Results in hard-to-optimize Triton code. Use fallback.
         return fallback_adaptive_avg_pool2d(x, output_size)
 
+    def start_index(index, out_dim, inp_dim):
+        return FloorDiv((index * inp_dim), out_dim)
+
+    def end_index(index, out_dim, inp_dim):
+        return FloorDiv((index + 1) * inp_dim + out_dim - 1, out_dim)
+
     fn_sum = _adaptive_pooling_fn(
+        start_index=start_index,
+        end_index=end_index,
         kernel_maxes=[h_kernel_max, w_kernel_max],
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
@@ -4226,7 +4228,15 @@ def adaptive_max_pool2d(x, output_size):
         # Kernel size too big. Results in hard-to-optimize Triton code. Use fallback.
         return fallback_adaptive_max_pool2d(x, output_size)
 
+    def start_index(index, out_dim, inp_dim):
+        return FloorDiv((index * inp_dim), out_dim)
+
+    def end_index(index, out_dim, inp_dim):
+        return FloorDiv((index + 1) * inp_dim + out_dim - 1, out_dim)
+
     inner_func_max_val = _adaptive_pooling_fn(
+        start_index=start_index,
+        end_index=end_index,
         kernel_maxes=[h_kernel_max, w_kernel_max],
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
@@ -4234,6 +4244,8 @@ def adaptive_max_pool2d(x, output_size):
     )
 
     inner_func_max_idx = _adaptive_pooling_fn_with_idx(
+        start_index=start_index,
+        end_index=end_index,
         kernel_maxes=[h_kernel_max, w_kernel_max],
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
@@ -4385,7 +4397,15 @@ def upsample_nearest2d_backward(
     h_kernel_max = ceildiv(inp_h, out_h)
     w_kernel_max = ceildiv(inp_w, out_w)
 
+    def start_index(index, out_dim, inp_dim):
+        return CeilDiv(index * inp_dim, out_dim)
+
+    def end_index(index, out_dim, inp_dim):
+        return start_index((index + 1), out_dim, inp_dim)
+
     fn_sum = _adaptive_pooling_fn(
+        start_index=start_index,
+        end_index=end_index,
         kernel_maxes=[h_kernel_max, w_kernel_max],
         in_sizes=[inp_h, inp_w],
         out_sizes=[out_h, out_w],
