@@ -4062,7 +4062,7 @@ def _adaptive_pooling_fn(kernel_maxes, in_sizes, out_sizes, pooling_fn):
     return fn
 
 
-def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, loader, pooling_fn):
+def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, pooling_fn):
 
     h_in, w_in = in_sizes
     h_out, w_out = out_sizes
@@ -4072,7 +4072,7 @@ def _adaptive_pooling_fn_with_idx(kernel_maxes, in_sizes, out_sizes, loader, poo
      w_start_index_fn,
      w_end_index_fn) = compute_indices_adaptive_pooling(h_in, w_in, h_out, w_out)
 
-    def fn(idx):
+    def fn(idx, loader):
         *prefix, bh, bw = idx
 
         h_start_index = h_start_index_fn(bh)
@@ -4231,7 +4231,6 @@ def adaptive_max_pool2d(x, output_size):
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
         pooling_fn=ops.maximum,
-        # todo: loader=pad_adaptive_loader(x, float("-inf")), ?? lets check if this is needed
     )
 
     inner_func_max_idx = _adaptive_pooling_fn_with_idx(
@@ -4239,19 +4238,30 @@ def adaptive_max_pool2d(x, output_size):
         in_sizes=[h_in, w_in],
         out_sizes=[h_out, w_out],
         pooling_fn=ops.maximum,
-        loader=pad_adaptive_loader(x, float("-inf")), # ?? lets check if this is needed
     )
+
+    def inner_fn_max_val(idx):
+        return inner_func_max_val(
+            idx,
+            pad_adaptive_loader(x, float("-inf"))
+        )
+
+    def inner_fn_max_idx(idx):
+        return inner_func_max_idx(
+            idx,
+            pad_adaptive_loader(x, float("-inf"))
+        )
 
     rv = Pointwise.create(
         device=x.get_device(),
         dtype=dtype,
-        inner_fn=inner_func_max_val,
+        inner_fn=inner_fn_max_val,
         ranges=new_size,
     )
     ri = Pointwise.create(
         device=x.get_device(),
         dtype=torch.int64,
-        inner_fn=inner_func_max_idx,
+        inner_fn=inner_fn_max_idx,
         ranges=new_size,
     )
     return rv, ri
