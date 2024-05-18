@@ -15,17 +15,11 @@ device = "cuda"
 torch._logging.set_logs(output_code=True)
 
 # SZ = [2**i for i in range(13, 20)]
-IN_SZ = [
-        100, 
-        300
-        ]
+IN_SZ = [100, 300]
 
 
-# RATIOS = [0.25, 0.5, 0.75]
-RATIOS = [0.1, 
-          0.15, 
-          0.2
-          ]
+RATIOS = [0.25, 0.5, 0.75]
+# RATIOS = [0.1, 0.15, 0.2]
 
 def benchmark(name, label, f, x, out_size, would_fallback):
     """Update signature and sub label as needed"""

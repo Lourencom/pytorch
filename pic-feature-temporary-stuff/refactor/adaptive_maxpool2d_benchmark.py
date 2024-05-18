@@ -19,11 +19,10 @@ IN_SZ = [100,
          300
          ]
 
-# RATIOS = [0.25, 0.5, 0.75]
-RATIOS = [0.1,
-          0.15,
-          0.2
-          ]
+RATIOS = [0.25, 0.5, 0.75]
+# FIXME: when using the following ratios, we get an error
+# saying that max_pool_2d_with_indices is not defined ???
+# RATIOS = [0.1, 0.15, 0.2]
 
 def benchmark(name, label, f, x, out_size, would_fallback):
     """Update signature and sub label as needed"""
