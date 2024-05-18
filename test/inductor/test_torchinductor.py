@@ -7657,9 +7657,9 @@ class CommonTemplate:
             return aten.avg_pool3d_backward(
                 a,
                 b,
-                [2, 2, 2],  # kernel size for 3D
-                [2, 2, 2],  # stride for 3D
-                [0, 0, 0],  # padding for 3D
+                [2, 2, 2],
+                [2, 2, 2],
+                [0, 0, 0],
                 True,
                 False,
                 None,
@@ -7668,8 +7668,8 @@ class CommonTemplate:
         self.common(
             fn,
             [
-                torch.randn([2, 4, 7, 7, 7]),  # 3D input tensor
-                torch.randn([2, 4, 14, 14, 14]),  # 3D gradient tensor
+                torch.randn([2, 4, 7, 7, 7]),
+                torch.randn([2, 4, 14, 14, 14]),
             ],
         )
 
@@ -7678,9 +7678,9 @@ class CommonTemplate:
             return aten.avg_pool3d_backward(
                 a,
                 b,
-                [3, 3, 3],  # kernel size for 3D
-                [1, 1, 1],  # stride for 3D
-                [1, 1, 1],  # padding for 3D
+                [3, 3, 3],
+                [1, 1, 1],
+                [1, 1, 1],
                 True,
                 False,
                 None,
@@ -7689,8 +7689,8 @@ class CommonTemplate:
         self.common(
             fn,
             [
-                torch.randn([1, 1, 20, 20, 15]),  # 3D input tensor
-                torch.randn([1, 1, 20, 20, 15]),  # 3D gradient tensor
+                torch.randn([1, 1, 20, 20, 15]),
+                torch.randn([1, 1, 20, 20, 15]),
             ],
         )
 
@@ -7699,9 +7699,9 @@ class CommonTemplate:
             return aten.avg_pool3d_backward(
                 a,
                 b,
-                [1, 1, 1],  # kernel size for 3D
-                [2, 2, 2],  # stride for 3D
-                [0, 0, 0],  # padding for 3D
+                [1, 1, 1],
+                [2, 2, 2],
+                [0, 0, 0],
                 False,
                 False,
                 None,
@@ -7711,8 +7711,8 @@ class CommonTemplate:
         self.common(
             fn,
             [
-                torch.randn([1, 2016, 11, 11, 11]),  # 3D input tensor
-                torch.randn([1, 2016, 21, 21, 21]),  # 3D gradient tensor
+                torch.randn([1, 2016, 11, 11, 11]),
+                torch.randn([1, 2016, 21, 21, 21]),
             ],
         )
         assertGeneratedKernelCountEqual(self, 1)
@@ -7722,9 +7722,9 @@ class CommonTemplate:
             return aten.avg_pool3d_backward(
                 a,
                 b,
-                [13, 13, 13],  # kernel size for 3D
-                [1, 1, 1],  # stride for 3D
-                [0, 0, 0],  # padding for 3D
+                [13, 13, 13],
+                [1, 1, 1],
+                [0, 0, 0],
                 True,
                 False,
                 None,
@@ -7734,8 +7734,8 @@ class CommonTemplate:
         self.common(
             fn,
             [
-                torch.randn([1, 16, 12, 12, 12]),  # 3D input tensor
-                torch.randn([1, 16, 24, 24, 24]),  # 3D gradient tensor
+                torch.randn([1, 16, 12, 12, 12]),
+                torch.randn([1, 16, 24, 24, 24]),
             ],
             check_lowp=False,
         )
