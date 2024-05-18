@@ -146,7 +146,6 @@ test_failures = {
     "test_avg_pool2d7_dynamic_shapes": TestFailure(("cpu", "cuda")),
     "test_avg_pool2d_backward4_dynamic_shapes": TestFailure(("cpu", "cuda")),
     "test_avg_pool3d_backward4_dynamic_shapes": TestFailure(("cpu", "cuda")),
-    # I am not sure why this should be here, I think its because no kernel should be generated on this one ??
     "test_baddbmm_dynamic_shapes": TestFailure(("cpu", "cuda")),
     "test_bmm2_dynamic_shapes": TestFailure(("cpu", "cuda")),
     "test_both_scalars_dynamic_shapes": TestFailure(("cpu", "cuda")),

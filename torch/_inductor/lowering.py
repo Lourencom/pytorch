@@ -2083,7 +2083,6 @@ def sdpa_constraint(fx_node, *args, **kwargs):
 
 
 # WIP
-# make_fallback(aten.avg_pool3d_backward) # lourencom + martim03, after done we remove this line
 make_fallback(aten._adaptive_avg_pool3d)  # @isuruf
 make_fallback(aten.adaptive_max_pool3d)  # @isuruf
 make_fallback(aten.fractional_max_pool3d)  # @isuruf
@@ -4019,7 +4018,6 @@ def compute_indices_adaptive_pooling(start_index, end_index, h_in, w_in, h_out, 
     return h_start_index, h_end_index, w_start_index, w_end_index
 
 
-# pooling_fn should be ops.add or ops.maximum, does not support indices
 def _adaptive_pooling_fn(start_index, end_index, kernel_maxes, in_sizes, out_sizes, pooling_fn):
 
     h_in, w_in = in_sizes
@@ -4761,16 +4759,11 @@ def avg_pool2d_backward(
     return rv
 
 
-############################### Start of my code ###########################################
-
-
 fallback_avg_pool3d_backward = fallback_handler(
     aten.avg_pool3d_backward.default, add_to_fallback_set=False
 )
 
 
-# TODO: we could additionally try to check if we can do the decomposition of
-#   maxpool3d, etc. (maybe for deterministic purposes)
 @register_lowering(aten.avg_pool3d_backward, type_promotion_kind=None)
 def avg_pool3d_backward(
     grad_output,
@@ -4795,7 +4788,7 @@ def avg_pool3d_backward(
     assert len(padding) == 3
     assert len(x.get_size()) in (4, 5)
 
-    grad_output.realize_hint()  # Optimize repeated reads
+    grad_output.realize_hint()
 
     *batch, depth, height, width = x.get_size()
 
@@ -4810,7 +4803,6 @@ def avg_pool3d_backward(
     new_size = list(x.get_size())
     dtype = x.get_dtype()
 
-    # Compute maximum window sizes for depth, height, and width based on strides and kernel sizes
     d_window_size, h_window_size, w_window_size = [
         max(max(d // stride[i] - max(0, (d - kernel_size[i]) // stride[i]), 1)
             for d in range(kernel_size[i] * 2))
@@ -4819,7 +4811,7 @@ def avg_pool3d_backward(
 
     window_size = d_window_size * h_window_size * w_window_size
     if window_size > 125:
-        # Use fallback for large kernel sizes that are not optimizable
+        # Kernel size too big. Results in hard-to-optimize Triton code.
         return fallback_avg_pool3d_backward(
             grad_output,
             x,
@@ -4832,12 +4824,10 @@ def avg_pool3d_backward(
         )
 
     def compute_pool_size_without_padding(pd, ph, pw):
-        # Define the scaling factors based on whether we include padding in the count or not
         stride_d, stride_h, stride_w = (ops.constant(s, torch.int32) for s in stride)
         pad_d, pad_h, pad_w = (ops.constant(p, torch.int32) for p in padding)
         kernel_d, kernel_h, kernel_w = (ops.constant(k, torch.int32) for k in kernel_size)
 
-        # Start and end positions adjusted for padding
         dstart, hstart, wstart = (
             ops.sub(ops.mul(p, s), pad)
             for p, s, pad in zip([pd, ph, pw], [stride_d, stride_h, stride_w], [pad_d, pad_h, pad_w])
@@ -4860,11 +4850,12 @@ def avg_pool3d_backward(
     def fn(idx):
         *prefix, d, h, w = idx
         d, h, w = (v + pad for v, pad in zip([d, h, w], padding))
-        # Compute start and end indices for pooling regions in the depth, height, and width dimensions
+       
         pdstart, phstart, pwstart = (
             ops.index_expr(FloorDiv(v - k + s, s), torch.int32)
             for v, k, s in zip([d, h, w], kernel_size, stride)
         )
+        
         pdend, phend, pwend = (
             ops.index_expr(FloorDiv(v, s) + 1, torch.int32)
             for v, s in zip([d, h, w], stride)
@@ -4932,9 +4923,6 @@ def avg_pool3d_backward(
         ranges=new_size,
     )
     return rv
-
-
-####################################################### End of my code
 
 
 def _validate_reduction_axis(x, axis):
